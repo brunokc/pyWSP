@@ -3,7 +3,7 @@ name = "pywsp"
 authors = [
     { name = "Bruno Kraychete da Costa", email = "brunokc@kraychete.com" },
 ]
-description = "A simple helper library to quick implement protocols on top of WebSockets"
+description = "A simple Python helper library that simplifies protocol implementation on top of WebSockets."
 classifiers = [
     "Programming Language :: Python :: 3",
 ]
