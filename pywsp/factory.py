@@ -14,16 +14,15 @@ class MessageFactory:
     #     self.register_message_types([(message_type, message_class)])
 
 
-    def register_message_type(self, message_class: Type[WebSocketMessage]) -> None:
-        self.register_message_types(message_class)
+    # def register_message_type(self, message_class: Type[WebSocketMessage]) -> None:
+    #     self.register_message_types(message_class)
 
 
-    def register_message_types(
-        # self, message_types: Iterable[Type[WebSocketMessage]]) -> None:
-        self, *message_types: Type[WebSocketMessage]) -> None:
-
+    def register_message_types(self, *message_types: Type[WebSocketMessage]) -> None:
         for cls in message_types:
-            type = getattr(cls, "_pywsp_message_type")
+            type = getattr(cls, "_pywsp_message_type", None)
+            if type is None:
+                raise TypeError(f"class {cls} is not compliant -- is it missing the @message decorator?")
             self._registry[type] = cls
 
 

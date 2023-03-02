@@ -60,7 +60,7 @@ class TestBasicProtocol:
     @pytest.mark.asyncio
     async def test_single_call(self) -> None:
         factory = MessageFactory()
-        factory.register_message_type(RequestMessage)
+        factory.register_message_types(RequestMessage)
 
         _LOGGER.debug("registering procotol")
         server = WebSocketServer(factory)
