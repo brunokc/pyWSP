@@ -1,0 +1,26 @@
+[project]
+name = "pywsp"
+authors = [
+    { name = "Bruno Kraychete da Costa", email = "brunokc@kraychete.com" },
+]
+description = "A simple helper library to quick implement protocols on top of WebSockets"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dynamic = ["version", "readme"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pywsp.__version__" }
+readme = { file = ["README.md"] }
+
+[tool.setuptools.package-data]
+pywsp = ["py.typed"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_level = "DEBUG"
+asyncio_mode = "auto"
