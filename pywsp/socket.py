@@ -28,19 +28,19 @@ class WebSocket:
         self._callback = callback
         self._factory = factory
 
-    # async def send_response(self, msg: WebSocketMessage, data: dict[str, Any]) -> None:
-    #     message = WebSocketMessage(msg.id, msg.type, response=data)
-    #     await self._ws.send_str(str(message))
-
     @property
     def peer_info(self) -> PeerInfo:
         return self._peer_info
 
+    async def close(self) -> None:
+        await self._ws.close()
+
     async def send_message(self, message: WebSocketMessage) -> None:
         await self._ws.send_json(asdict(message))
 
-    async def close(self) -> None:
-        await self._ws.close()
+    # async def raise_event(self, event_name: str, payload: Dict[str, Any]) -> None:
+    #     message = EventMessage(event_name, payload)
+    #     await self.send_message(message)
 
     async def handle_messages(self) -> None:
         self._callback.on_new_connection(self)
@@ -66,11 +66,3 @@ class WebSocket:
         message_type: str = data[MESSAGE_TYPE]
         message = self._factory.create(message_type, **data)
         await self._callback.on_new_message(self, message)
-
-    # async def raise_event(self, event_name: str, payload: Dict[str, Any]) -> None:
-    #     event = {
-    #         "name": event_name,
-    #         "payload": payload
-    #     }
-    #     message = EventMessage(event)
-    #     await self.send_message(message)

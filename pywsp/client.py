@@ -25,36 +25,6 @@ class WebSocketClient:
     async def close(self) -> None:
         await self._ws.close()
 
-    # async def _dispatch(self, ws, data) -> None:
-    #     id = data["id"]
-    #     action = data["action"]
-    #     args = data["args"] if "args" in data else None
-    #     response = data["response"] if "response" in data else None
-
-        # print(f"Server (raw): {msg}")
-        # print(f"WebSocketMessage: id={id}; action={action}")
-        # if args is not None:
-        #     print(f"  args: {jsonutils.dumps(args, indent=2)}")
-        # if response is not None:
-        #     print(f"  response: {jsonutils.dumps(response, indent=2)}")
-
-        # if (action == "raiseEvent" and args is not None and args["event"] == "thermostatUpdated"
-        #     and "payload" in args):
-
-        #     thermostats = args["payload"]["thermostats"]
-        #     await get_status(ws, thermostats)
-
-    # async def _handle_connection(self, ws) -> None:
-    #     _LOGGER.debug("waiting for messages...")
-    #     async for msg in ws:
-    #         if msg.type == aiohttp.WSMsgType.TEXT:
-    #             await self._dispatch(ws, msg.data)
-    #         elif msg.type == aiohttp.WSMsgType.BINARY:
-    #             #self.handle_request(msg.data)
-    #             pass
-    #         elif msg.type == aiohttp.WSMsgType.ERROR:
-    #             break
-
     def _get_peer_info(self, response: aiohttp.ClientWebSocketResponse) -> Tuple[str, int]:
         client_ip = ""
         client_port = 0

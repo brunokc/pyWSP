@@ -45,7 +45,6 @@ class WebSocketServer:
         wsr = web.WebSocketResponse()
         await wsr.prepare(request)
         ws = WebSocket(wsr, client_info, self._callback, self._factory)
-        # ws = WebSocket(client_ip, client_port, self._callback, self._factory)
 
         self.clients.append(ws)
         try:
@@ -55,10 +54,6 @@ class WebSocketServer:
 
         _LOGGER.debug("connection closed")
         return wsr
-
-    # async def raise_event(self, event: str, args: Dict[str, Any]) -> None:
-    #     for client in self.clients:
-    #         await client.raise_event(event, args)
 
     async def run(self, address: str, port: int, url: str) -> None:
         if self._callback is None:
