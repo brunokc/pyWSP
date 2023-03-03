@@ -7,7 +7,7 @@ Class = TypeVar("Class")
 
 # def message(cls: Optional[Class] = None, *, type: str) -> Union[Class, Callable[[Class], Class]]:
 # def message(cls: Optional[Type[T]] = None, *, type: str) -> Union[Type[T], Callable[[Type[T]], Type[T]]]:
-def message(*, type: str) -> Callable[[Type[T]], Type[T]]:
+def message(cls: Optional[Type[T]] = None, *, type: str) -> Callable[[Type[T]], Type[T]]:
     """Decorator used to tag data classes used with WebSocket."""
     # def wrap(cls: Class) -> Class:
     def wrap(cls: Type[T]) -> Type[T]:
@@ -42,14 +42,14 @@ def message(*, type: str) -> Callable[[Type[T]], Type[T]]:
         setattr(cls, "_pywsp_message_type", type)
         return cls
 
-    # # See if we're being called as @message or @message().
-    # if cls is None:
-    #     # We're called with parens.
-    #     return wrap
+    # See if we're being called as @message or @message().
+    if cls is None:
+        # We're called with parens.
+        return wrap
 
-    # # We're called as @message without parens.
-    # return wrap(cls)
-    return wrap
+    # We're called as @message without parens.
+    return wrap(cls)
+    # return wrap
 
 
 @dataclass

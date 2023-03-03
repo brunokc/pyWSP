@@ -1,10 +1,7 @@
-import sys
-sys.path += ".."
-
 import asyncio
 import logging
-from pywsp import *
 import pytest
+from pywsp import *
 from typing import List
 
 WS_HOST = "127.0.0.1"
