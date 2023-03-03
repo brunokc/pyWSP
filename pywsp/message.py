@@ -5,11 +5,8 @@ from typing import Any, Callable, Optional, Type, TypeVar, Union
 T = TypeVar("T")
 Class = TypeVar("Class")
 
-# def message(cls: Optional[Class] = None, *, type: str) -> Union[Class, Callable[[Class], Class]]:
-# def message(cls: Optional[Type[T]] = None, *, type: str) -> Union[Type[T], Callable[[Type[T]], Type[T]]]:
-def message(cls: Optional[Type[T]] = None, *, type: str) -> Callable[[Type[T]], Type[T]]:
+def message(cls: Optional[Type[T]] = None, *, type: str) -> Union[Callable[[Type[T]], Type[T]], Type[T]]:
     """Decorator used to tag data classes used with WebSocket."""
-    # def wrap(cls: Class) -> Class:
     def wrap(cls: Type[T]) -> Type[T]:
         # First, we wrap the class in dataclass since we want all that goodness
         cls = dataclass(cls)
@@ -24,9 +21,6 @@ def message(cls: Optional[Type[T]] = None, *, type: str) -> Callable[[Type[T]], 
 
         # The new __init__ won't need to include the type parameter
         def new_init(self: Type[T], *args: Any, **kwargs: Any) -> None:
-            # print(f"args: {args}")
-            # print(f"kwargs: {kwargs}")
-
             # If we have positional parameters, call the original init passing everything from the
             # original __init__ before the type parameter, followed by type itself, then the rest of
             # the positional parameters.
@@ -49,7 +43,6 @@ def message(cls: Optional[Type[T]] = None, *, type: str) -> Callable[[Type[T]], 
 
     # We're called as @message without parens.
     return wrap(cls)
-    # return wrap
 
 
 @dataclass
