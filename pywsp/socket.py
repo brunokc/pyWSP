@@ -1,7 +1,7 @@
 from aiohttp import web, WSMsgType, ClientWebSocketResponse
 from dataclasses import asdict
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Dict, NamedTuple, Tuple, Union
 
 from .callback import WebSocketCallback
 from .const import *
@@ -11,23 +11,30 @@ from .message import WebSocketMessage
 
 _LOGGER = logging.getLogger(__name__)
 
+class PeerInfo(NamedTuple):
+    ip: str
+    port: int
 
 class WebSocket:
     def __init__(
         self,
         ws: Union[ClientWebSocketResponse, web.WebSocketResponse],
+        peer_info: Tuple[str, int],
         callback: WebSocketCallback,
         factory: MessageFactory) -> None:
 
         self._ws = ws
-        # self.client_ip = client_ip
-        # self.client_port = client_port
+        self._peer_info: PeerInfo = PeerInfo(peer_info[0], peer_info[1])
         self._callback = callback
         self._factory = factory
 
     # async def send_response(self, msg: WebSocketMessage, data: dict[str, Any]) -> None:
     #     message = WebSocketMessage(msg.id, msg.type, response=data)
     #     await self._ws.send_str(str(message))
+
+    @property
+    def peer_info(self) -> PeerInfo:
+        return self._peer_info
 
     async def send_message(self, message: WebSocketMessage) -> None:
         await self._ws.send_json(asdict(message))

@@ -1,6 +1,7 @@
 import aiohttp
 from dataclasses import asdict
 import logging
+from typing import Tuple
 
 from .callback import WebSocketCallback
 from .factory import MessageFactory
@@ -54,9 +55,18 @@ class WebSocketClient:
     #         elif msg.type == aiohttp.WSMsgType.ERROR:
     #             break
 
+    def _get_peer_info(self, response: aiohttp.ClientWebSocketResponse) -> Tuple[str, int]:
+        client_ip = ""
+        client_port = 0
+        peername = response.get_extra_info("peername")
+        if peername is not None:
+            client_ip, client_port = peername
+        return client_ip, client_port
+
     async def run(self, url: str) -> None:
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(url) as ws:
                 _LOGGER.info("Connected to %s", url)
-                self._ws = WebSocket(ws, self._callback, self._message_factory)
+                server_info = self._get_peer_info(ws)
+                self._ws = WebSocket(ws, server_info, self._callback, self._message_factory)
                 await self._ws.handle_messages()

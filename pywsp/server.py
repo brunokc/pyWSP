@@ -39,12 +39,12 @@ class WebSocketServer:
     async def websocket_handler(self, request: Request) -> StreamResponse:
         assert self._callback is not None
 
-        client_ip, client_port = self.get_peer_info(request)
-        _LOGGER.debug(f"connection from %s:%d", client_ip, client_port)
+        client_info = self.get_peer_info(request)
+        _LOGGER.debug(f"connection from %s:%d", client_info[0], client_info[1])
 
         wsr = web.WebSocketResponse()
         await wsr.prepare(request)
-        ws = WebSocket(wsr, self._callback, self._factory)
+        ws = WebSocket(wsr, client_info, self._callback, self._factory)
         # ws = WebSocket(client_ip, client_port, self._callback, self._factory)
 
         self.clients.append(ws)
