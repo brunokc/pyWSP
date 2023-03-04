@@ -15,10 +15,9 @@ class MessageFactory:
                 raise TypeError(f"class {cls} is not compliant -- is it missing the @message decorator?")
             self._registry[type] = cls
 
-
     def create(self, message_type: str, **kwargs: Any) -> WebSocketMessage:
         if message_type not in self._registry:
             raise WebSocketUnsupportedMessageType(message_type)
 
-        factory = self._registry[message_type]
-        return factory(**kwargs)
+        message_class = self._registry[message_type]
+        return message_class(**kwargs)
