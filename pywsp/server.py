@@ -49,6 +49,9 @@ class WebSocketServer:
         self.clients.append(ws)
         try:
             await ws.handle_messages()
+        except Exception as e:
+            _LOGGER.error("Closing websocket due to error handling message: %s", e)
+            await ws.close()
         finally:
             self.clients.remove(ws)
 
