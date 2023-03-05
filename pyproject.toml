@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "pywsp"
 authors = [
@@ -15,10 +19,6 @@ readme = { file = ["README.md"] }
 
 [tool.setuptools.package-data]
 pywsp = ["py.typed"]
-
-[build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 log_cli = true
