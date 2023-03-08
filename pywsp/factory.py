@@ -12,7 +12,8 @@ class MessageFactory:
         for cls in message_types:
             type = getattr(cls, "_pywsp_message_type", None)
             if type is None:
-                raise TypeError(f"class {cls} is not compliant -- is it missing the @message decorator?")
+                raise TypeError(f"class {cls} is not compliant with pyWSP -- "
+                    "is it missing the @message decorator?")
             self._registry[type] = cls
 
     def create(self, message_type: str, **kwargs: Any) -> WebSocketMessage:
