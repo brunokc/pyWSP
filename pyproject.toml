@@ -9,7 +9,11 @@ authors = [
 ]
 description = "A simple Python helper library that simplifies protocol implementation on top of WebSockets."
 classifiers = [
-    "Programming Language :: Python :: 3",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.9",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
 ]
 dynamic = ["version", "readme"]
 
