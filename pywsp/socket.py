@@ -38,10 +38,6 @@ class WebSocket:
     async def send_message(self, message: WebSocketMessage) -> None:
         await self._ws.send_json(asdict(message))
 
-    # async def raise_event(self, event_name: str, payload: Dict[str, Any]) -> None:
-    #     message = EventMessage(event_name, payload)
-    #     await self.send_message(message)
-
     async def handle_messages(self) -> None:
         self._callback.on_new_connection(self)
 
