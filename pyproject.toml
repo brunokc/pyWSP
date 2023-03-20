@@ -15,11 +15,12 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dynamic = ["version", "readme"]
+dynamic = ["version", "readme", "dependencies"]
 
 [tool.setuptools.dynamic]
 version = { attr = "pywsp.__version__" }
 readme = { file = ["README.md"] }
+dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools.package-data]
 pywsp = ["py.typed"]
