@@ -1,3 +1,6 @@
+import sys
+sys.path += [".", ".."]
+
 import asyncio
 import logging
 import pytest
@@ -14,11 +17,11 @@ logging.basicConfig(level=logging.DEBUG, format="%(name)s: %(message)s")
 _LOGGER = logging.getLogger(__name__)
 
 @message(type="request")
-class RequestMessage(WebSocketMessage):
+class RequestMessage:
     request: str
 
 @message(type="response")
-class ResponseMessage(WebSocketMessage):
+class ResponseMessage:
     response: str
 
 
@@ -78,7 +81,8 @@ class TestBasicProtocol:
 
         await server_callback.new_connection_event.wait()
 
-        await client.send_message(RequestMessage(1, "this is a request"))
+        _LOGGER.debug("sending message")
+        await client.send_message(RequestMessage("this is a request"))
         await server_callback.new_message_event.wait()
 
         assert len(server_callback.messages) == 1
@@ -111,7 +115,7 @@ class TestBasicProtocol:
         await server_callback.new_connection_event.wait()
 
         # Request
-        await client.send_message(RequestMessage(1, "this is a request"))
+        await client.send_message(RequestMessage("this is a request"))
         await server_callback.new_message_event.wait()
 
         assert len(server_callback.messages) == 1
@@ -122,7 +126,7 @@ class TestBasicProtocol:
         assert msg.request == "this is a request"
 
         # Response
-        await server_callback.ws.send_message(ResponseMessage(2, "this is a response"))
+        await server_callback.ws.send_message(ResponseMessage("this is a response"))
         await client_callback.new_message_event.wait()
 
         assert len(client_callback.messages) == 1
@@ -135,3 +139,8 @@ class TestBasicProtocol:
         await client.close()
         await server.close()
         await asyncio.sleep(0.25)
+
+if __name__ == "__main__":
+
+    test = TestBasicProtocol()
+    asyncio.run(test.test_single_call())

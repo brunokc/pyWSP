@@ -1,6 +1,7 @@
 from aiohttp import web, ClientSession, ClientWebSocketResponse, WSMsgType
 import asyncio
-from dataclasses import asdict
+from dataclasses import asdict, is_dataclass
+import json
 import logging
 from typing import Any, Dict, NamedTuple, Optional, Tuple, Union
 
@@ -27,6 +28,7 @@ class WebSocket:
 
         self._callback: Optional[WebSocketMessageCallback] = None
         self._handle_message_task: asyncio.Task = None
+        self._msg_id = 1
 
         self._factory = factory
         self._wsr = wsr
@@ -58,8 +60,32 @@ class WebSocket:
         if self._session:
             await self._session.close()
 
+    def _default_serializer(obj: Any):
+        # Since datetime derives from date, check for it first
+        if is_dataclass(obj):
+            return asdict(obj)
+
     async def send_message(self, message: WebSocketMessage) -> None:
-        await self._wsr.send_json(asdict(message))
+        # print("message json: ", json.dumps(message, indent=2, default=lambda x: asdict(x) if is_dataclass(x) else x))
+        # print(dir(message))
+        if getattr(message, MESSAGE_ID, None):
+            _LOGGER.error("invalid message received (missing 'id'). Discarding...")
+            raise WebSocketInvalidMessage("missing required field 'id'")
+        if getattr(message, MESSAGE_TYPE, None):
+            _LOGGER.error("invalid message received (missing 'type'). Discarding...")
+            raise WebSocketInvalidMessage("missing required field 'type'")
+
+        message._pywsp_message_id = self._msg_id
+        self._msg_id += 1
+        envelope = {
+            "@id": message._pywsp_message_id,
+            "@type": message._pywsp_message_type,
+            "data": message
+        }
+        message_text = json.dumps(envelope, default=lambda x: asdict(x) if is_dataclass(x) else x)
+        print(f"envelope: {envelope}")
+        print("json: ", message_text)
+        await self._ws.send_str(message_text)
 
     def try_start_handle_message_task(self):
         # Only invoke in client scenarios, where we have a session defined.
@@ -94,16 +120,17 @@ class WebSocket:
             elif msg.type == WSMsgType.ERROR:
                 _LOGGER.error("error %s", self._wsr.exception())
 
-    async def _dispatch_callback(self, data: Dict[str, Any]) -> None:
-        if MESSAGE_ID not in data:
+    async def dispatch_callback(self, payload: Dict[str, Any]) -> None:
+        if MESSAGE_ID not in payload:
             _LOGGER.error("invalid message received (missing 'id'). Discarding...")
             raise WebSocketInvalidMessage("missing required field 'id'")
-        if MESSAGE_TYPE not in data:
+        if MESSAGE_TYPE not in payload:
             _LOGGER.error("invalid message received (missing 'type'). Discarding...")
             raise WebSocketInvalidMessage("missing required field 'type'")
 
         if self._callback:
-            message_type: str = data[MESSAGE_TYPE]
+            message_type: str = payload[MESSAGE_TYPE]
+            data = payload["data"]
             message = self._factory.create(message_type, **data)
             await self._callback.on_new_message(self, message)
 

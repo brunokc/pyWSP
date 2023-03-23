@@ -8,11 +8,11 @@ logging.basicConfig(level=logging.DEBUG, format="%(name)s: %(message)s")
 _LOGGER = logging.getLogger(__name__)
 
 @message(type="foo")
-class FooMessage(WebSocketMessage):
+class FooMessage:
     foo: str
 
 @message(type="bar")
-class BarMessage(WebSocketMessage):
+class BarMessage:
     bar: List[FooMessage]
 
 
