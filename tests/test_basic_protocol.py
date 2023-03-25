@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import pytest
+from contextlib import closing
 from pywsp import *
 from typing import List
 
@@ -21,7 +22,7 @@ class ResponseMessage(WebSocketMessage):
     response: str
 
 
-class Server(WebSocketCallback):
+class Server(WebSocketConnectionCallback, WebSocketMessageCallback):
     def __init__(self, parent: "TestBasicProtocol") -> None:
         self._parent = parent
         self.messages: List[WebSocketMessage] = []
@@ -30,15 +31,18 @@ class Server(WebSocketCallback):
         self.ws: WebSocket
 
     def on_new_connection(self, ws: WebSocket) -> None:
+        _LOGGER.info("server: new connection: %s", ws)
+        ws.register_callback(self)
         self.ws = ws
         self.new_connection_event.set()
 
     async def on_new_message(self, ws: WebSocket, message: WebSocketMessage) -> None:
+        _LOGGER.info("server: new message: %s", message)
         self.messages.append(message)
         self.new_message_event.set()
 
 
-class Client(WebSocketCallback):
+class Client(WebSocketConnectionCallback, WebSocketMessageCallback):
     def __init__(self, parent: "TestBasicProtocol") -> None:
         self._parent = parent
         self.messages: List[WebSocketMessage] = []
@@ -46,9 +50,11 @@ class Client(WebSocketCallback):
         self.new_connection_event = asyncio.Event()
 
     def on_new_connection(self, ws: WebSocket) -> None:
+        _LOGGER.info("client: new connection: %s", ws)
         self.new_connection_event.set()
 
     async def on_new_message(self, ws: WebSocket, message: WebSocketMessage) -> None:
+        _LOGGER.info("client: new message: %s", message)
         self.messages.append(message)
         self.new_message_event.set()
 
@@ -63,15 +69,14 @@ class TestBasicProtocol:
         server = WebSocketServer(factory)
         server_callback = Server(self)
         server.register_callback(server_callback)
-        server_task = asyncio.create_task(server.run(WS_HOST, WS_PORT, WS_URL), name="server")
+        await server.start_listening(WS_HOST, WS_PORT, WS_URL)
 
-        client = WebSocketClient(factory)
+        client = WebSocket(factory)
         client_callback = Client(self)
         client.register_callback(client_callback)
-        client_task = asyncio.create_task(client.run(f"http://{WS_HOST}:{WS_PORT}{WS_URL}"), name="client")
+        await client.connect(f"http://{WS_HOST}:{WS_PORT}{WS_URL}")
 
         await server_callback.new_connection_event.wait()
-        await client_callback.new_connection_event.wait()
 
         await client.send_message(RequestMessage(1, "this is a request"))
         await server_callback.new_message_event.wait()
@@ -84,9 +89,7 @@ class TestBasicProtocol:
         assert msg.request == "this is a request"
 
         await client.close()
-        await client_task
         await server.close()
-        await server_task
         await asyncio.sleep(0.25)
 
     @pytest.mark.asyncio
@@ -98,15 +101,14 @@ class TestBasicProtocol:
         server = WebSocketServer(factory)
         server_callback = Server(self)
         server.register_callback(server_callback)
-        server_task = asyncio.create_task(server.run(WS_HOST, WS_PORT, WS_URL), name="server")
+        await server.start_listening(WS_HOST, WS_PORT, WS_URL)
 
-        client = WebSocketClient(factory)
+        client = WebSocket(factory)
         client_callback = Client(self)
         client.register_callback(client_callback)
-        client_task = asyncio.create_task(client.run(f"http://{WS_HOST}:{WS_PORT}{WS_URL}"), name="client")
+        await client.connect(f"http://{WS_HOST}:{WS_PORT}{WS_URL}")
 
         await server_callback.new_connection_event.wait()
-        await client_callback.new_connection_event.wait()
 
         # Request
         await client.send_message(RequestMessage(1, "this is a request"))
@@ -131,7 +133,5 @@ class TestBasicProtocol:
         assert msg.response == "this is a response"
 
         await client.close()
-        await client_task
         await server.close()
-        await server_task
         await asyncio.sleep(0.25)

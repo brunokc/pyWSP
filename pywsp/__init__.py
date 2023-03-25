@@ -1,7 +1,6 @@
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
-from .callback import WebSocketCallback
-from .client import WebSocketClient
+from .callback import WebSocketConnectionCallback, WebSocketMessageCallback
 from .factory import MessageFactory
 from .message import WebSocketMessage, message
 from .server import WebSocketServer

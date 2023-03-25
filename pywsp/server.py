@@ -3,7 +3,7 @@ from aiohttp.web import Request, StreamResponse
 import logging
 from typing import Any, Dict, List, Tuple
 
-from .callback import WebSocketCallback
+from .callback import WebSocketConnectionCallback
 from .factory import MessageFactory
 from .socket import WebSocket
 
@@ -11,12 +11,13 @@ _LOGGER = logging.getLogger(__name__)
 
 class WebSocketServer:
     def __init__(self, factory: MessageFactory):
-        self._callback: WebSocketCallback
-        self._factory = factory
-        self.clients: List[WebSocket] = []
+        self._callback: WebSocketConnectionCallback
         self._site: web.BaseSite
 
-    def register_callback(self, callback: WebSocketCallback) -> None:
+        self._factory = factory
+        self.clients: List[WebSocket] = []
+
+    def register_callback(self, callback: WebSocketConnectionCallback) -> None:
         self._callback = callback
 
     async def close(self) -> None:
@@ -40,27 +41,31 @@ class WebSocketServer:
         assert self._callback is not None
 
         client_info = self.get_peer_info(request)
-        _LOGGER.debug(f"connection from %s:%d", client_info[0], client_info[1])
+        _LOGGER.info(f"connection from %s:%d", client_info[0], client_info[1])
 
         wsr = web.WebSocketResponse()
         await wsr.prepare(request)
-        ws = WebSocket(wsr, client_info, self._callback, self._factory)
+        ws = WebSocket(self._factory, wsr=wsr, peer_info=client_info)
 
         self.clients.append(ws)
+        self._callback.on_new_connection(ws)
+
         try:
-            await ws.handle_messages()
+            await ws._handle_messages()
         except Exception as e:
-            _LOGGER.error("Closing websocket due to error handling message: %s", e)
+            _LOGGER.error("closing websocket due to error handling message: %s", e)
             await ws.close()
         finally:
+            await self._callback.on_closing(ws)
             self.clients.remove(ws)
 
-        _LOGGER.debug("connection closed")
+        _LOGGER.info("connection closed")
+
         return wsr
 
-    async def run(self, address: str, port: int, url: str) -> None:
+    async def start_listening(self, address: str, port: int, url: str) -> None:
         if self._callback is None:
-            _LOGGER.debug("No callback defined, canceling websocket")
+            _LOGGER.error("No callback defined, canceling websocket")
             raise RuntimeError("Starting websocket without setting a callback")
 
         app = web.Application()
@@ -70,4 +75,4 @@ class WebSocketServer:
         await runner.setup()
         self._site = web.TCPSite(runner, address, port)
         await self._site.start()
-        _LOGGER.debug("serving on %s:%d", address, port)
+        _LOGGER.info("serving on %s:%d", address, port)
