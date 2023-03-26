@@ -1,4 +1,4 @@
-from aiohttp import web, ClientSession, ClientWebSocketResponse, WSMsgType
+from aiohttp import web, ClientSession, ClientWebSocketResponse, WSMessage, WSMsgType
 import asyncio
 from dataclasses import asdict, is_dataclass
 import json
@@ -9,7 +9,6 @@ from .callback import WebSocketMessageCallback
 from .const import *
 from .exceptions import WebSocketInvalidMessage
 from .factory import MessageFactory
-from .message import WebSocketMessage
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,32 +21,28 @@ class WebSocket:
         self,
         factory: MessageFactory,
         *,
-        wsr: Union[ClientWebSocketResponse, web.WebSocketResponse] = None,
-        peer_info: Tuple[str, int] = None,
-        session: ClientSession = None) -> None:
+        wsr: Optional[Union[ClientWebSocketResponse, web.WebSocketResponse]] = None,
+        peer_info: Optional[Tuple[str, int]] = None,
+        session: Optional[ClientSession] = None) -> None:
 
         self._callback: Optional[WebSocketMessageCallback] = None
-        self._handle_message_task: asyncio.Task = None
+        self._handle_message_task: Optional[asyncio.Task[None]] = None
         self._msg_id = 1
 
         self._factory = factory
         self._wsr = wsr
-        self._peer_info = peer_info
+        self._peer_info = PeerInfo(peer_info[0], peer_info[1]) if peer_info else None
         self._session = session
 
     @property
-    def peer_info(self) -> PeerInfo:
+    def peer_info(self) -> Optional[PeerInfo]:
         return self._peer_info
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "WebSocket":
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    async def __anext__(self):
-        async for msg in self._wsr:
-            yield msg
+    async def __aexit__(self, *args: Any) -> None:
+        await self.close()
 
     def register_callback(self, callback: WebSocketMessageCallback) -> None:
         self._callback = callback
@@ -56,16 +51,15 @@ class WebSocket:
     async def close(self) -> None:
         if self._handle_message_task:
             self._handle_message_task.cancel()
-        await self._wsr.close()
+        if self._wsr:
+            await self._wsr.close()
         if self._session:
             await self._session.close()
 
-    def _default_serializer(obj: Any):
-        # Since datetime derives from date, check for it first
-        if is_dataclass(obj):
-            return asdict(obj)
+    async def send_message(self, message: Any) -> None:
+        if self._wsr is None:
+            raise RuntimeError("invalid state (is the socket connected?)")
 
-    async def send_message(self, message: WebSocketMessage) -> None:
         # print("message json: ", json.dumps(message, indent=2, default=lambda x: asdict(x) if is_dataclass(x) else x))
         # print(dir(message))
         if getattr(message, MESSAGE_ID, None):
@@ -85,16 +79,16 @@ class WebSocket:
         message_text = json.dumps(envelope, default=lambda x: asdict(x) if is_dataclass(x) else x)
         print(f"envelope: {envelope}")
         print("json: ", message_text)
-        await self._ws.send_str(message_text)
+        await self._wsr.send_str(message_text)
 
-    def try_start_handle_message_task(self):
+    def try_start_handle_message_task(self) -> None:
         # Only invoke in client scenarios, where we have a session defined.
         # For server created sockets, the server handles the message loop.
         assert self._handle_message_task is None
         if self._session is None or self._wsr is None or self._callback is None:
             return
 
-        async def handle_websocket_messages():
+        async def handle_websocket_messages() -> None:
             try:
                 await self._handle_messages()
             except Exception as e:
@@ -110,6 +104,7 @@ class WebSocket:
             name="WebSocket_message_loop")
 
     async def _handle_messages(self) -> None:
+        assert self._wsr is not None
         async for msg in self._wsr:
             _LOGGER.debug("new message %s", msg.__repr__())
 
@@ -120,7 +115,7 @@ class WebSocket:
             elif msg.type == WSMsgType.ERROR:
                 _LOGGER.error("error %s", self._wsr.exception())
 
-    async def dispatch_callback(self, payload: Dict[str, Any]) -> None:
+    async def _dispatch_callback(self, payload: Dict[str, Any]) -> None:
         if MESSAGE_ID not in payload:
             _LOGGER.error("invalid message received (missing 'id'). Discarding...")
             raise WebSocketInvalidMessage("missing required field 'id'")
@@ -132,6 +127,8 @@ class WebSocket:
             message_type: str = payload[MESSAGE_TYPE]
             data = payload["data"]
             message = self._factory.create(message_type, **data)
+            setattr(message, MESSAGE_ID, payload[MESSAGE_ID])
+            setattr(message, MESSAGE_TYPE, payload[MESSAGE_TYPE])
             await self._callback.on_new_message(self, message)
 
     @staticmethod

@@ -21,20 +21,20 @@ class TestMessageFactory():
         factory = MessageFactory()
         factory.register_message_types(FooMessage)
 
-        foomsg = factory.create("foo", id=123, foo="foo")
-        assert foomsg == FooMessage(123, "foo")
+        foomsg = factory.create("foo", foo="foo")
+        assert foomsg == FooMessage("foo")
 
     def test_nested_message_serialization(self) -> None:
         factory = MessageFactory()
         factory.register_message_types(BarMessage)
 
-        foos = [FooMessage(1, "foo")]
+        foos = [FooMessage("foo")]
 
-        barmsg = factory.create("bar", id=123, bar=foos)
-        assert barmsg == BarMessage(123, [FooMessage(1, "foo")])
+        barmsg = factory.create("bar", bar=foos)
+        assert barmsg == BarMessage([FooMessage("foo")])
 
     def test_use_decorator_as_function(self) -> None:
-        class AlmostGoodMessage(WebSocketMessage):
+        class AlmostGoodMessage:
             doesntmatter: str
 
         NowGoodMessage = message(AlmostGoodMessage, type="almost_good")
@@ -45,12 +45,12 @@ class TestMessageFactory():
 
         # nowgood = [NowGoodMessage(123, "blah")]
 
-        nowgoodmsg = factory.create("almost_good", id=123, doesntmatter="blah")
-        assert nowgoodmsg == NowGoodMessage(123, "blah")
+        nowgoodmsg = factory.create("almost_good", doesntmatter="blah")
+        assert nowgoodmsg == NowGoodMessage("blah")
 
     def test_exception_on_non_decorated_type(self) -> None:
         # Purposely missing the @message decorator
-        class BadMessage(WebSocketMessage):
+        class BadMessage:
             doesntmatter: str
 
         factory = MessageFactory()

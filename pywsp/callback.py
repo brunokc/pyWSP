@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .message import WebSocketMessage
     from .socket import WebSocket
 
 class WebSocketConnectionCallback(ABC):
@@ -15,5 +14,5 @@ class WebSocketConnectionCallback(ABC):
 
 class WebSocketMessageCallback(ABC):
     @abstractmethod
-    async def on_new_message(self, ws: "WebSocket", message: "WebSocketMessage") -> None:
+    async def on_new_message(self, ws: "WebSocket", message: Any) -> None:
         pass

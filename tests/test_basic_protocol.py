@@ -4,9 +4,10 @@ sys.path += [".", ".."]
 import asyncio
 import logging
 import pytest
-from contextlib import closing
 from pywsp import *
-from typing import List
+from typing import Any, List
+
+from pywsp.const import MESSAGE_ID
 
 WS_HOST = "127.0.0.1"
 WS_PORT = 11111
@@ -28,7 +29,7 @@ class ResponseMessage:
 class Server(WebSocketConnectionCallback, WebSocketMessageCallback):
     def __init__(self, parent: "TestBasicProtocol") -> None:
         self._parent = parent
-        self.messages: List[WebSocketMessage] = []
+        self.messages: List[Any] = []
         self.new_message_event = asyncio.Event()
         self.new_connection_event = asyncio.Event()
         self.ws: WebSocket
@@ -39,7 +40,7 @@ class Server(WebSocketConnectionCallback, WebSocketMessageCallback):
         self.ws = ws
         self.new_connection_event.set()
 
-    async def on_new_message(self, ws: WebSocket, message: WebSocketMessage) -> None:
+    async def on_new_message(self, ws: WebSocket, message: Any) -> None:
         _LOGGER.info("server: new message: %s", message)
         self.messages.append(message)
         self.new_message_event.set()
@@ -48,7 +49,7 @@ class Server(WebSocketConnectionCallback, WebSocketMessageCallback):
 class Client(WebSocketConnectionCallback, WebSocketMessageCallback):
     def __init__(self, parent: "TestBasicProtocol") -> None:
         self._parent = parent
-        self.messages: List[WebSocketMessage] = []
+        self.messages: List[Any] = []
         self.new_message_event = asyncio.Event()
         self.new_connection_event = asyncio.Event()
 
@@ -56,7 +57,7 @@ class Client(WebSocketConnectionCallback, WebSocketMessageCallback):
         _LOGGER.info("client: new connection: %s", ws)
         self.new_connection_event.set()
 
-    async def on_new_message(self, ws: WebSocket, message: WebSocketMessage) -> None:
+    async def on_new_message(self, ws: WebSocket, message: Any) -> None:
         _LOGGER.info("client: new message: %s", message)
         self.messages.append(message)
         self.new_message_event.set()
@@ -89,7 +90,7 @@ class TestBasicProtocol:
 
         msg = server_callback.messages[0]
         _LOGGER.debug("server message: %s", msg)
-        assert msg.id == 1
+        assert getattr(msg, MESSAGE_ID, None) == 1
         assert msg.request == "this is a request"
 
         await client.close()
@@ -122,7 +123,7 @@ class TestBasicProtocol:
 
         msg = server_callback.messages[0]
         _LOGGER.debug("server message: %s", msg)
-        assert msg.id == 1
+        assert getattr(msg, MESSAGE_ID, None) == 1
         assert msg.request == "this is a request"
 
         # Response
@@ -133,7 +134,7 @@ class TestBasicProtocol:
 
         msg = client_callback.messages[0]
         _LOGGER.debug("client message: %s", msg)
-        assert msg.id == 2
+        assert getattr(msg, MESSAGE_ID, None) == 1
         assert msg.response == "this is a response"
 
         await client.close()
