@@ -3,25 +3,17 @@ import inspect
 import logging
 
 from dataclasses import asdict
-from functools import partial
-from typing import Any, Dict
+from typing import Any
 
 from .callback import WebSocketConnectionCallback, WebSocketMessageCallback
-# from .exceptions import WebSocketUnsupportedMessageType
+from .const import INPUT_MESSAGE_TYPE, OUTPUT_MESSAGE_TYPE
 from .factory import MessageFactory
-from .message import deserialize_message, WebSocketErrorMessage
+from .message import WebSocketErrorMessage
 from .server import WebSocketServer
 from .socket import WebSocket
 
 _LOGGER = logging.getLogger(__name__)
 
-INPUT_MESSAGE_TYPE = "input_message_type"
-OUTPUT_MESSAGE_TYPE = "output_message_type"
-
-def get_class_from_method(func) -> bool:
-    cls = func.__qualname__[:-1]
-    if inspect.isclass(cls):
-        return cls
 
 def api(*, input, output):
     def wrap(func):
@@ -29,21 +21,6 @@ def api(*, input, output):
         setattr(func, OUTPUT_MESSAGE_TYPE, output)
         return func
     return wrap
-
-# class ApiCall:
-#     def __init__(self, request_message_type, response_message_type):
-#         self._request_message_type = request_message_type
-#         self._response_message_type = response_message_type
-
-#     async def __call__(self, socket, *args, **kwargs):
-#         request = self._request_message_type(*args, *kwargs)
-#         await socket.send_message(request)
-#         response = await self._socket.receive_message()
-#         if isinstance(response, WebSocketErrorMessage):
-#             # TODO:
-#             pass
-
-#         return response
 
 
 class WebSocketError(RuntimeError):
@@ -92,7 +69,7 @@ class WebSocketApiServer(WebSocketConnectionCallback, WebSocketMessageCallback):
                 self._message_factory.register_message_types(input, output)
                 call = getattr(self, method.__name__, None)
                 assert call is not None
-                self._method_map[input] = call #partial(method, self)
+                self._method_map[input] = call
 
     async def start(self) -> None:
         await self._wss.start_listening(self._address, self._port, self._url)
@@ -126,7 +103,6 @@ class WebSocketApiServer(WebSocketConnectionCallback, WebSocketMessageCallback):
         outputClass = getattr(method, OUTPUT_MESSAGE_TYPE, None)
         assert outputClass is not None
         response = outputClass(result)
-        # asyncio.get_running_loop().call_soon(ws.send_message, response)
         await ws.send_message(response)
 
 
@@ -156,14 +132,11 @@ class WebSocketApiClient(WebSocketMessageCallback):
         request = request_message_type(*args, *kwargs)
 
         await self._ws.send_message(request)
-        # response_message = await self._ws.receive_message()
         response = await self._future
-        # response = deserialize_message(response_message.json(), self._message_factory)
 
         if isinstance(response, WebSocketErrorMessage):
             raise WebSocketError(response)
         elif not isinstance(response, response_message_type):
             raise TypeError(f"unexpected response message type '{type(response)}'")
 
-        # return asdict(response)
         return response
