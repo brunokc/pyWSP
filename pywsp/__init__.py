@@ -1,6 +1,7 @@
 """PyWSP - Python WebSocket Protocol"""
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
+from .api import api, WebSocketApiClient, WebSocketApiServer
 from .callback import WebSocketConnectionCallback, WebSocketMessageCallback
 from .factory import MessageFactory
 from .message import message

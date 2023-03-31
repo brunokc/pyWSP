@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict
 
+from .const import PYWSP_MESSAGE_TYPE
 from .exceptions import WebSocketUnsupportedMessageType
 
 class MessageFactory:
@@ -9,11 +10,12 @@ class MessageFactory:
 
     def register_message_types(self, *message_types: Any) -> None:
         for cls in message_types:
-            type = getattr(cls, "_pywsp_message_type", None)
+            type = getattr(cls, PYWSP_MESSAGE_TYPE, None)
             if type is None:
                 raise TypeError(f"class {cls} is not compliant with pyWSP -- "
                     "is it missing the @message decorator?")
             self._registry[type] = cls
+
 
     def create(self, message_type: str, **kwargs: Any) -> Any:
         if message_type not in self._registry:

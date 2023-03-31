@@ -9,6 +9,7 @@ from .callback import WebSocketMessageCallback
 from .const import *
 from .exceptions import WebSocketInvalidMessage
 from .factory import MessageFactory
+from .message import deserialize_message
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ class WebSocket:
     @property
     def peer_info(self) -> Optional[PeerInfo]:
         return self._peer_info
+
+    def connected(self) -> bool:
+        return self._wsr and not self._wsr.closed
 
     async def __aenter__(self) -> "WebSocket":
         return self
@@ -77,9 +81,14 @@ class WebSocket:
             "data": message
         }
         message_text = json.dumps(envelope, default=lambda x: asdict(x) if is_dataclass(x) else x)
-        print(f"envelope: {envelope}")
-        print("json: ", message_text)
+        # print(f"envelope: {envelope}")
+        # print("json: ", message_text)
         await self._wsr.send_str(message_text)
+
+    async def receive_message(self) -> Any:
+        if self._wsr is None:
+            raise RuntimeError("invalid state (is the socket connected?)")
+        return await self._wsr.receive()
 
     def try_start_handle_message_task(self) -> None:
         # Only invoke in client scenarios, where we have a session defined.
@@ -124,11 +133,7 @@ class WebSocket:
             raise WebSocketInvalidMessage("missing required field 'type'")
 
         if self._callback:
-            message_type: str = payload[MESSAGE_TYPE]
-            data = payload["data"]
-            message = self._factory.create(message_type, **data)
-            setattr(message, MESSAGE_ID, payload[MESSAGE_ID])
-            setattr(message, MESSAGE_TYPE, payload[MESSAGE_TYPE])
+            message = deserialize_message(payload, self._factory)
             await self._callback.on_new_message(self, message)
 
     @staticmethod
